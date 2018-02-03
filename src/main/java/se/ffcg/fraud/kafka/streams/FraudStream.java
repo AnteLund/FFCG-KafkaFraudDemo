@@ -61,7 +61,22 @@ public class FraudStream {
   }
 
   private Transaction calculateRiskScore(Transaction transaction) {
-    transaction.setRiskScore("99");
+    int riskScore = 0;
+    if(Integer.parseInt(transaction.getAmount()) > 1000 && Integer.parseInt(transaction.getAmount()) < 10000 ) {
+      riskScore += 25;
+    } else if (Integer.parseInt(transaction.getAmount()) > 10000) {
+      riskScore += 50;
+    }
+
+    if(transaction.getCountry().equals("Brazil")) {
+      riskScore += 100;
+    } else if (transaction.getCountry().equals("Denmark")) {
+      riskScore += 25;
+    } else if (!transaction.getCountry().equals("Sweden")) {
+      riskScore += 10;
+    }
+
+    transaction.setRiskScore(String.valueOf(riskScore));
     return transaction;
   }
 }

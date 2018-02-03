@@ -17,6 +17,9 @@ public class GoogleGeoService {
 
   public Location getLocation(String zipCode, String city, String country) {
     AddressResponse addressResponse = this.restTemplate.getForObject(buildUrl(zipCode, city, country), AddressResponse.class);
+    if(addressResponse.getResults().isEmpty()) {
+      return Location.MISSING_LOCATION;
+    }
     return addressResponse.getResults().get(0).getGeometry().getLocation();
   }
 
