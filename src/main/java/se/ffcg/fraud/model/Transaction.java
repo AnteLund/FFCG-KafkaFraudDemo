@@ -1,6 +1,5 @@
 package se.ffcg.fraud.model;
 
-
 public class Transaction {
   private String id;
   private String timestamp;

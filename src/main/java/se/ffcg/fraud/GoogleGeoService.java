@@ -24,6 +24,8 @@ public class GoogleGeoService {
   }
 
   private String buildUrl(String zipCode, String city, String country) {
-    return "https://maps.googleapis.com/maps/api/geocode/json?address=" + zipCode + "+" + city + "+" + country + "&key=AIzaSyCoKV4b3rj348XX-nD3wIddNH4hp0rqLsU";
+    String url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + zipCode + "+" + city + "+" + country + "&key=AIzaSyCoKV4b3rj348XX-nD3wIddNH4hp0rqLsU";
+    System.out.println(url);
+    return url;
   }
 }
