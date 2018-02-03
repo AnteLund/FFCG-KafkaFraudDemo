@@ -7,13 +7,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Location {
   private Double lat;
 
-  @JsonProperty("lng")
   private Double lng;
 
   public void setLat(Double lat) {
     this.lat = lat;
   }
 
+  @JsonProperty("lng")
   public void setLng(Double lng) {
     this.lng = lng;
   }
@@ -22,6 +22,7 @@ public class Location {
     return lat;
   }
 
+  @JsonProperty("lon")
   public Double getLng() {
     return lng;
   }
