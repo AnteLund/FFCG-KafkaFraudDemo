@@ -1,18 +1,23 @@
 
 package se.ffcg.fraud.kafka.streams;
 
+
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.streams.Consumed;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KStreamBuilder;
+import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Serialized;
-import org.apache.kafka.streams.processor.TopologyBuilder;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.QueryableStoreType;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
@@ -70,19 +75,20 @@ public class CustomerEventStreamProcessor {
     props.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
     // Denna behöver vi för att undvika duplikat konsumering
     props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-    KStreamBuilder builder = new KStreamBuilder();
+
+
+    StreamsBuilder builder = new StreamsBuilder();
 
     //Stream CustomerEvent's from Kafka topic
-    KStream<String, CustomerEvent> eventStream = builder.
-        stream(Serdes.String(), eventSerde, TOPIC_EVENTS);
+    KStream<String, CustomerEvent> eventStream =
+        builder.stream(TOPIC_EVENTS, Consumed.with(Serdes.String(), eventSerde));
+
     eventStream.print(Printed.toSysOut());
 
     //Aggregate customer snapshot from CustomerEvent
     eventStream
         //ReKey to CustomerId
-        .selectKey((eventKey, eventValue) -> {
-          return eventValue.getCustomerId();
-        })
+        .selectKey((eventKey, eventValue) -> eventValue.getCustomerId())
 
         //Group by Key (CustomerId)
         .groupByKey(Serialized.with(Serdes.String(), eventSerde))
@@ -90,17 +96,16 @@ public class CustomerEventStreamProcessor {
         //Aggregate customer from event
         .aggregate(
             () -> new Customer(),
-            (kim, event, currentCustomer) ->
-                customerEventMerger.merge(currentCustomer, event),
-            customerSerde,
-            CUSTOMER_AGG_STORE)
-
+            (kim, event, currentCustomer) -> customerEventMerger.merge(currentCustomer, event),
+            Materialized
+                .<String, Customer, KeyValueStore<Bytes, byte[]>>as(CUSTOMER_AGG_STORE)
+                .withValueSerde(customerSerde))
         //Stream to aggregate-topic.
         .toStream()
         .to(CUSTOMER_AGG_STATE_TOPIC, Produced.with(Serdes.String(), customerSerde));
 
-    //Starta processen
-    startProcess(builder, props);
+    //Start process
+    startProcess(builder.build(), props);
   }
 
   private String getPersonalIdFromEvent(CustomerEvent eventValue) {
@@ -116,8 +121,8 @@ public class CustomerEventStreamProcessor {
   }
 
   // Example: Wait until the store of type T is queryable.  When it is, return a reference to the store.
-  private void startProcess(TopologyBuilder builder, Properties props) {
-    KafkaStreams streams = new KafkaStreams(builder, props);
+  private void startProcess(Topology topology, Properties props) {
+    KafkaStreams streams = new KafkaStreams(topology, props);
     streams.cleanUp();
     streams.setUncaughtExceptionHandler((thread, exception) ->
         {
