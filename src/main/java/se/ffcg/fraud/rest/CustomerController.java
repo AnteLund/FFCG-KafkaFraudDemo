@@ -4,6 +4,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,8 +22,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
-@RequestMapping(value = "/event")
-public class RestEventProducer {
+@RequestMapping(value = "/customer")
+public class CustomerController {
 
   @Autowired
   KafkaTemplate<String, CustomerEvent> kafkaTemplate;
@@ -30,33 +31,35 @@ public class RestEventProducer {
   private static final String KAFKA_SUMMIT_EVENT_TOPIC = "kafka.summit.events";
 
   @RequestMapping(value = "create-customer", method = POST)
-  public void createCustomer(@RequestBody CreateCustomerRequest request) {
+  public String createCustomer(@RequestBody CreateCustomerRequest request) {
     CustomerCreatedEvent customerCreatedEvent = new CustomerCreatedEvent();
     customerCreatedEvent.setFirstName(request.getFirstName());
-    customerCreatedEvent.setLastName(request.getFirstName());
+    customerCreatedEvent.setLastName(request.getLastName());
     customerCreatedEvent.setSocialSecurityNumber(request.getSocialSecurityNumber());
-    customerCreatedEvent.setCustomerId(request.getCustomerId());
+    UUID customerId = UUID.randomUUID();
+    customerCreatedEvent.setCustomerId(customerId.toString());
     customerCreatedEvent.setGuid(UUID.randomUUID().toString());
     customerCreatedEvent.setTimeStamp(LocalDateTime.now().toString());
     kafkaTemplate.send(KAFKA_SUMMIT_EVENT_TOPIC, customerCreatedEvent.getGuid(), customerCreatedEvent);
+    return customerId.toString();
   }
 
-  @RequestMapping(value = "create-metadata", method = POST)
-  public void createMetadata(@RequestBody CreateMetadataRequest request) {
+  @RequestMapping(value = "{customer-id}/create-metadata", method = POST)
+  public void createMetadata(@PathVariable("customer-id") String customerId,@RequestBody CreateMetadataRequest request) {
     CustomerMetaDataSetEvent customerMetaDataSetEvent = new CustomerMetaDataSetEvent();
     customerMetaDataSetEvent.setType(request.getType());
     customerMetaDataSetEvent.setValue(request.getValue());
-    customerMetaDataSetEvent.setCustomerId(request.getCustomerId());
+    customerMetaDataSetEvent.setCustomerId(customerId);
     customerMetaDataSetEvent.setGuid(UUID.randomUUID().toString());
     customerMetaDataSetEvent.setTimeStamp(LocalDateTime.now().toString());
     kafkaTemplate.send(KAFKA_SUMMIT_EVENT_TOPIC, customerMetaDataSetEvent.getGuid(), customerMetaDataSetEvent);
   }
 
-  @RequestMapping(value = "updateCustomer", method = POST)
-  public void customerUpdate(@RequestBody CustomerUpdateRequest request) {
+  @RequestMapping(value = "{customer-id}/update-customer", method = POST)
+  public void customerUpdate(@PathVariable("customer-id") String customerId, @RequestBody CustomerUpdateRequest request) {
     CustomerUpdatedEvent customerUpdatedEvent = new CustomerUpdatedEvent();
     customerUpdatedEvent.setSocialSecurityNumber(request.getSocialSecurityNumber());
-    customerUpdatedEvent.setCustomerId(request.getCustomerId());
+    customerUpdatedEvent.setCustomerId(customerId);
     customerUpdatedEvent.setGuid(UUID.randomUUID().toString());
     customerUpdatedEvent.setTimeStamp(LocalDateTime.now().toString());
     kafkaTemplate.send(KAFKA_SUMMIT_EVENT_TOPIC, customerUpdatedEvent.getGuid(), customerUpdatedEvent);

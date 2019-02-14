@@ -1,18 +1,10 @@
 package se.ffcg.fraud.model.rest;
 
 public class CreateCustomerRequest {
-  String customerId;
   String firstName;
   String lastName;
   String socialSecurityNumber;
 
-  public String getCustomerId() {
-    return customerId;
-  }
-
-  public void setCustomerId(String customerId) {
-    this.customerId = customerId;
-  }
 
   public String getFirstName() {
     return firstName;
